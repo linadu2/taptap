@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grille Aléatoire</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/script.js"></script>
+</head>
+
+<body id="body">
+<div class="top-bar">
+    <div>
+        <label for="gameSelect">Choisir un jeu :</label>
+        <select onchange="refresh()" id="gameSelect">
+            <option value="1">Normal</option>
+            <option value="2">Sans malus</option>
+            <option value="3">0 Vie</option>
+        </select>
+    </div>
+    <div class="chrono" id="chrono">0.00</div>
+    <div class="time-select">
+        <label for="timeSelect">Temps :</label>
+        <select onchange="refresh()" id="timeSelect">
+            <option value="10">10s</option>
+            <option value="30">30s</option>
+            <option value="60">1m</option>
+        </select>
+    </div>
+    <img alt="sound icon" src="image/son.png" width="32" height="32" onclick="toggle_sound(this)" id="soundSelect">
+</div>
+
+<div class="buttons">
+    <button class="vert" onclick="startGame()">Démarrer</button>
+    <button class="rouge" onclick="stopGame()">Arrêter</button>
+</div>
+
+<div class="grid">
+    <div onclick="badclick()" class="cell" id="cell-0"></div>
+    <div onclick="badclick()" class="cell" id="cell-1"></div>
+    <div onclick="badclick()" class="cell" id="cell-2"></div>
+    <div onclick="badclick()" class="cell" id="cell-3"></div>
+    <div onclick="badclick()" class="cell" id="cell-4"></div>
+    <div onclick="badclick()" class="cell" id="cell-5"></div>
+    <div onclick="badclick()" class="cell" id="cell-6"></div>
+    <div onclick="badclick()" class="cell" id="cell-7"></div>
+    <div onclick="badclick()" class="cell" id="cell-8"></div>
+</div>
+<div id="leaderboardModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeLeaderboard()">&times;</span>
+        <h2>Leaderboard</h2>
+        <div id="leaderboardContent"></div>
+    </div>
+</div>
+
+<div class="score" id="score">Score: 0 | High Score: 0</div>
+<div class="buttons">
+    <button class="vert" onclick="showLeaderboard()">Afficher Leader board</button>
+</div>
+<audio id="audioDefaite" src="music/perdu.mp3" preload="auto"></audio>
+<audio id="audioRater" src="music/rater.mp3" preload="auto"></audio>
+<audio id="ok" src="music/ok.mp3" preload="auto"></audio>
+<audio id="START" src="music/START.mp3" preload="auto"></audio>
+
+</body>
+
+</html>
