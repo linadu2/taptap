@@ -13,25 +13,8 @@ let sound = true
 
 let token, highScores;
 
-/*
-highScores = {
-    "1": {
-        "10": { score: 0, player: "" },
-        "30": { score: 0, player: "" },
-        "60": { score: 0, player: "" }
-    },
-    "2": {
-        "10": { score: 0, player: "" },
-        "30": { score: 0, player: "" },
-        "60": { score: 0, player: "" }
-    },
-    "3": {
-        "10": { score: 0, player: "" },
-        "30": { score: 0, player: "" },
-        "60": { score: 0, player: "" }
-    }
-};
-*/
+let mode, temps;
+
 
 function getHighScores() {
     fetch(`${getBaseUrl()}:3000/api/getScore`, { method: 'GET' })
@@ -72,7 +55,7 @@ function activateRandomCell() {
         this.classList.remove("active");
         this.onclick = null;
         activeCell = null;
-        setTimeout(activateRandomCell, 10);
+        setTimeout(activateRandomCell, 5);
     };
 }
 
@@ -102,9 +85,9 @@ function timer(timeLeft) {
 }
 
 function badclick() {
-    if (gameRunning == true && document.getElementById("gameSelect").value != 2) {
-        if (document.getElementById("gameSelect").value == 3) {
-            stopGame();
+    if (gameRunning == true && mode != 2) {
+        if (mode == 3) {
+            gameRunning = false
             addBadClass(3);
             let audioDefaite = document.getElementById("audioDefaite");
             if(sound){
@@ -115,7 +98,7 @@ function badclick() {
             addBadClass(0.2);
             let score = document.getElementById("score");
             nbTap--;
-            score.innerText = "Score: " + nbTap + " | High Score: " + highScores["1"]["10"].score;
+            score.innerText = "Score: " + nbTap;
             let audioRater = document.getElementById("audioRater");
             if(sound){
                 audioRater.play();
@@ -127,16 +110,10 @@ function badclick() {
 function showLeaderboard() {
     let leaderboardHTML = "<table class='leaderboard-table'><tr><th>Mode</th><th>Temps</th><th>Joueur</th><th>Score</th></tr>";
 
-    const modeNames = {
-        "1": "Normal",
-        "2": "Sans Malus",
-        "3": "0 Vie"
-    };
-
     for (let mode in highScores) {
         for (let time in highScores[mode]) {
             let entry = highScores[mode][time];
-            leaderboardHTML += `<tr><td>${modeNames[mode] || mode}</td><td>${time}s</td><td>${entry.player || 'N/A'}</td><td>${entry.score}</td></tr>`;
+            leaderboardHTML += `<tr><td>${mode}</td><td>${time}s</td><td>${entry.player || 'N/A'}</td><td>${entry.score || 'N/A'}</td></tr>`;
         }
     }
 
@@ -159,6 +136,14 @@ function clic() {
 }
 
 async function startGame() {
+
+    if (gameRunning == true) {
+        return;
+    }
+    gameRunning = true;
+    mode = document.getElementById("gameSelect").value;
+    temps = document.getElementById("timeSelect").value;
+
     let START = document.getElementById("START");
     if(sound){
         START.play();
@@ -167,9 +152,7 @@ async function startGame() {
     // Attendre 3 secondes avant de continuer
     await attendre(3500);
 
-    if (gameRunning == true) {
-        return;
-    }
+
 
     // Réinitialise le chrono et enlève l'animation
     let afficheTemps = document.getElementById("chrono");
@@ -179,9 +162,8 @@ async function startGame() {
 
     nbTap = 0;
     document.getElementById("score").innerText = "Score: 0";
-    gameRunning = true;
     activateRandomCell();
-    timer(document.getElementById("timeSelect").value);
+    timer(temps);
 }
 
 // Fonction pour attendre un certain nombre de millisecondes
@@ -207,9 +189,10 @@ function stopGame() {
 
     gameRunning = false;
 
+    let table_conv = {'1' : 'Normal' , '2' : 'Sans Malus', '3' : '0 Vie'}
     // Récupère le mode de jeu et le temps sélectionnés
-    const gameMode = document.getElementById("gameSelect").value;
-    const timeSelected = document.getElementById("timeSelect").value;
+    const gameMode = table_conv[mode];
+    const timeSelected = temps + 'S';
 
     // Vérifie si le score est un high score
     const currentHighScore = highScores[gameMode][timeSelected];
@@ -235,7 +218,7 @@ function stopGame() {
 
 function refresh() {
 
-    let timeSelect = document.getElementById("timeSelect");
+    let timeSelect = temps;
     let chronoDisplay = document.getElementById("chrono");
     let timeValue = timeSelect.value; // Récupère la valeur sélectionnée
 
@@ -243,8 +226,8 @@ function refresh() {
     chronoDisplay.innerText = timeValue + ".00"; // Format pour afficher le chrono
 
     // Affichage du meilleur score pour la combinaison actuelle de mode et de temps
-    const gameMode = document.getElementById("gameSelect").value;
-    const timeSelected = document.getElementById("timeSelect").value;
+    const gameMode = mode;
+    const timeSelected = temps;
     const currentHighScore = highScores[gameMode][timeSelected];
     document.getElementById("score").innerText = `Score: 0 | High Score: ${currentHighScore.score} (${currentHighScore.player})`;
 }
