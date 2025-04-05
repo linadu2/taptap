@@ -217,6 +217,7 @@ function stopGame() {
 }
 
 function refresh() {
+    let table_conv = {'1' : 'Normal' , '2' : 'Sans Malus', '3' : '0 Vie'}
 
     let timeSelect = temps || document.getElementById("timeSelect").value;
     let chronoDisplay = document.getElementById("chrono");
@@ -226,8 +227,8 @@ function refresh() {
     chronoDisplay.innerText = timeValue + ".00"; // Format pour afficher le chrono
 
     // Affichage du meilleur score pour la combinaison actuelle de mode et de temps
-    const gameMode = mode;
-    const timeSelected = temps;
+    const gameMode = table_conv[mode];
+    const timeSelected = temps + 'S';
     const currentHighScore = highScores[gameMode][timeSelected];
     document.getElementById("score").innerText = `Score: 0 | High Score: ${currentHighScore.score} (${currentHighScore.player})`;
 }
