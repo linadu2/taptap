@@ -260,3 +260,8 @@ label {
     background-color: #343a40;
     color: white;
 }
+footer {
+    background-color: #f1f1f1;
+    padding: 10px;
+    text-align: center;
+}

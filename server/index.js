@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const https = require('https');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -10,16 +12,19 @@ app.use(express.json());
 
 app.use(cors());
 
+// Load certificate files from Let's Encrypt
+const options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/fullchain.pem')
+};
+
 // Define a route
 app.get('/api/getScore', async (req, res) => {
     res.json(await getScores());
     //res.json({"1": {"10": { score: 0, player: "" },"30": { score: 0, player: "" },"60": { score: 0, player: "" }},"2": {"10": { score: 0, player: "" },"30": { score: 0, player: "" },"60": { score: 0, player: "" }},"3": {"10": { score: 0, player: "" },"30": { score: 0, player: "" },"60": { score: 0, player: "" }}})
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
+
 
 const validTokens = new Set();
 
@@ -56,6 +61,7 @@ app.put('/api/updateScore', async (req, res) => {
     res.json({ message: 'Score updated successfully' });
 });
 
-app.listen(3000, () => {
-    console.log('Server listening on port 3000');
+// Create and start the HTTPS server
+https.createServer(options, app).listen(port, () => {
+    console.log('HTTPS server running on port 443');
 });
