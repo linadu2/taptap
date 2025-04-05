@@ -218,9 +218,9 @@ function stopGame() {
 
 function refresh() {
 
-    let timeSelect = temps;
+    let timeSelect = temps || document.getElementById("timeSelect").value;
     let chronoDisplay = document.getElementById("chrono");
-    let timeValue = timeSelect.value; // Récupère la valeur sélectionnée
+    let timeValue = timeSelect; // Récupère la valeur sélectionnée
 
     // Met à jour le chrono avec la nouvelle valeur
     chronoDisplay.innerText = timeValue + ".00"; // Format pour afficher le chrono
