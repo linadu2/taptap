@@ -36,8 +36,10 @@ async function getScores(){
         conn = await pool.getConnection();
 
         const query = `
-          SELECT pseudo, score, modes , temps
-          FROM leaderboard join modes join temps
+          select pseudo , score , modes, temps 
+          from leaderboard as l 
+              join modes as m on m.modesID = l.modesID 
+              join temps as t on t.tempsID = l.tempsID
         `;
 
         const rows = await conn.query(query);
@@ -76,8 +78,8 @@ async function updateScore(pseudo, score, mode) {
 
     const updateQuery = `
         UPDATE leaderboard as l
-        JOIN modes as m
-        JOIN temps as t
+        JOIN modes as m on m.modesID = l.modesID
+        JOIN temps as t on t.tempsID = l.tempsID
         SET l.pseudo = ?, l.score = ?
         WHERE m.modes = ? AND t.temps = ? ;
     `;
