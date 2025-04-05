@@ -113,7 +113,7 @@ function showLeaderboard() {
     for (let mode in highScores) {
         for (let time in highScores[mode]) {
             let entry = highScores[mode][time];
-            leaderboardHTML += `<tr><td>${mode}</td><td>${time}s</td><td>${entry.player || 'N/A'}</td><td>${entry.score || 'N/A'}</td></tr>`;
+            leaderboardHTML += `<tr><td>${mode}</td><td>${time}</td><td>${entry.player || 'N/A'}</td><td>${entry.score || 'N/A'}</td></tr>`;
         }
     }
 
