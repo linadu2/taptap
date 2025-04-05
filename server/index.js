@@ -12,11 +12,18 @@ app.use(express.json());
 
 app.use(cors());
 
-// Load certificate files from Let's Encrypt
-const options = {
-    key: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/fullchain.pem')
-};
+let hasHttps = false;
+
+// check if certificate exist
+if(fs.existsSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem')){
+    hasHttps = true;
+    // Load certificate files from Let's Encrypt
+    const options = {
+        key: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem'),
+        cert: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/fullchain.pem')
+    };
+}
+
 
 // Define a route
 app.get('/api/getScore', async (req, res) => {
@@ -61,7 +68,15 @@ app.put('/api/updateScore', async (req, res) => {
     res.json({ message: 'Score updated successfully' });
 });
 
-// Create and start the HTTPS server
-https.createServer(options, app).listen(port, () => {
-    console.log('HTTPS server running on port 443');
-});
+
+if(hasHttps){
+    // Create and start the HTTPS server
+    https.createServer(options, app).listen(port, () => {
+        console.log('HTTPS server running on port 3000');
+    });
+} else {
+    app.listen(port, () => {
+        console.log('HTTP server running on port 3000');
+    })
+}
+
