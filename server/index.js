@@ -14,11 +14,13 @@ app.use(cors());
 
 let hasHttps = false;
 
+let options = {}
+
 // check if certificate exist
 if(fs.existsSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem')){
     hasHttps = true;
     // Load certificate files from Let's Encrypt
-    const options = {
+    options = {
         key: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem'),
         cert: fs.readFileSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/fullchain.pem')
     };
@@ -71,7 +73,7 @@ app.put('/api/updateScore', async (req, res) => {
 
 if(hasHttps){
     // Create and start the HTTPS server
-    https.createServer(app).listen(port, () => {
+    https.createServer(options, app).listen(port, () => {
         console.log('HTTPS server running on port 3000');
     });
 } else {
