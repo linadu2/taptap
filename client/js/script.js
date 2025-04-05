@@ -2,6 +2,7 @@ window.onload = function () {
     getHighScores()
     get_token()
     closeLeaderboard()
+    startSound()
 };
 
 let gameRunning = false;
@@ -216,7 +217,7 @@ function stopGame() {
     if (nbTap > currentHighScore.score) {
         let playerName = prompt("Félicitations ! Nouveau meilleur score ! Entrez votre pseudo :");
         if (playerName) {
-            update_score(token, nbTap, playerName)
+            update_score(token, nbTap, playerName, [gameMode, timeSelected])
             // Mise à jour de l'affichage du meilleur score après la partie
             document.getElementById("score").innerText =
                 `Score: ${nbTap} | High Score: ${nbTap} (${playerName})`;
@@ -258,6 +259,14 @@ function toggle_sound(e){
         e.src = "image/son.png";
         sound = true
     }
+    localStorage.setItem('sound', sound);
+}
+
+function startSound(){
+    sound = (localStorage.getItem('sound') === 'true');
+    if (!sound){
+        document.getElementById('soundSelect').src = "image/pas-de-son.png"
+    }
 }
 
 function get_token(){
@@ -282,14 +291,14 @@ function get_token(){
 
 }
 
-function update_score(token, score, pseudo){
+function update_score(token, score, pseudo, mode){
     score = Number(score)
     fetch(`${getBaseUrl()}:3000/api/updateScore`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ token, score, pseudo })
+        body: JSON.stringify({ token, score, pseudo, mode })
     })
         .then(response => {
             if (!response.ok) {

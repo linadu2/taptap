@@ -1,6 +1,10 @@
 const mariadb = require('mariadb');
 const dotenv = require('dotenv')
 
+dotenv.config();
+
+//console.log(process.env);
+
 const pool = mariadb.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -50,16 +54,33 @@ async function getScores(){
             }
         };
 
-        console.log(highScores);
-
         return highScores;
     } catch (err) {
         console.error('Error getting scores:', err);
     } finally {
-        if (conn) conn.release();
+        if (conn) await conn.release();
     }
 }
 
+async function updateScore(pseudo, score, mode){
+    let conn;
 
+    let conv_table_times = {10:1, 30:2,60:3}
 
-module.exports = { getScores }
+    let modes = mode[0]
+    let times = conv_table_times[mode[1]]
+
+    console.log(pseudo, score, modes, times)
+
+    try {
+        conn = await pool.getConnection();
+        const rows = await conn.query('UPDATE score SET nom_joueur = ?, points = ? WHERE id_mode = ? AND id_temps = ?;', [pseudo, score, modes, times]);
+        return rows
+    } catch (err) {
+        console.error('Error getting scores:', err);
+    } finally {
+        if (conn) await conn.release();
+    }
+}
+
+module.exports = { getScores, updateScore };

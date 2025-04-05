@@ -4,7 +4,7 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-const { getScores } = require('./db');
+const { getScores, updateScore } = require('./db');
 
 app.use(express.json());
 
@@ -32,8 +32,8 @@ app.post('/api/getSessionToken', (req, res) => {
 });
 
 // Route to update the high score
-app.put('/api/updateScore', (req, res) => {
-    const { token, score, pseudo } = req.body;
+app.put('/api/updateScore', async (req, res) => {
+    const { token, score, pseudo, mode } = req.body;
 
     // Check for a valid token
     if (!validTokens.has(token)) {
@@ -47,7 +47,8 @@ app.put('/api/updateScore', (req, res) => {
     }
 
     // Here, you would update the high score in your database
-    console.log(`Updating high score to: ${score}; ${pseudo}`);
+    console.log(`Updating high score to: ${score}; ${pseudo}; ${mode}`);
+    await updateScore(pseudo, score, mode)
 
     //remove the token if it's meant for one-time use
     validTokens.delete(token);
