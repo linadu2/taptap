@@ -71,7 +71,7 @@ app.put('/api/updateScore', async (req, res) => {
 
 if(hasHttps){
     // Create and start the HTTPS server
-    https.createServer(options, app).listen(port, () => {
+    https.createServer(app).listen(port, () => {
         console.log('HTTPS server running on port 3000');
     });
 } else {
