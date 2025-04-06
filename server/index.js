@@ -35,13 +35,24 @@ app.get('/api/getScore', async (req, res) => {
 
 
 
-const validTokens = new Set();
+const validTokens = new Map();
+const TOKEN_TTL = 10 * 1000; // 10 sec
+
+// Clean up expired tokens periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [token, expiry] of validTokens.entries()) {
+        if (expiry < now) {
+            validTokens.delete(token);
+        }
+    }
+}, 5 * 1000); // Clean up 5 sec
 
 // Route to initialize a game session and issue a token
 app.post('/api/getSessionToken', (req, res) => {
-    // In production, generate a cryptographically secure token
     const token = Math.random().toString(36).substr(2);
-    validTokens.add(token);
+    const expiry = Date.now() + TOKEN_TTL;
+    validTokens.set(token, expiry);
     res.json({ token });
 });
 

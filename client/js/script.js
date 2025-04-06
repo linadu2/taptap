@@ -1,6 +1,5 @@
 window.onload = function () {
     getHighScores()
-    get_token()
     closeLeaderboard()
     startSound()
 };
@@ -11,7 +10,7 @@ let nbTap = 0;
 
 let sound = true
 
-let token, highScores;
+let highScores;
 
 let mode, temps;
 
@@ -85,7 +84,7 @@ function timer(timeLeft) {
 }
 
 function badclick() {
-    if (gameRunning == true && mode != 2) {
+    if (gameRunning && mode != 2) {
         if (mode == 3) {
             gameRunning = false
             addBadClass(3);
@@ -137,7 +136,7 @@ function clic() {
 
 async function startGame() {
 
-    if (gameRunning == true) {
+    if (gameRunning) {
         return;
     }
     gameRunning = true;
@@ -200,7 +199,7 @@ function stopGame() {
     if (nbTap > currentHighScore.score) {
         let playerName = prompt("Félicitations ! Nouveau meilleur score ! Entrez votre pseudo :");
         if (playerName) {
-            update_score(token, nbTap, playerName, [gameMode, timeSelected])
+            update_score(nbTap, playerName, [gameMode, timeSelected])
             // Mise à jour de l'affichage du meilleur score après la partie
             document.getElementById("score").innerText =
                 `Score: ${nbTap} | High Score: ${nbTap} (${playerName})`;
@@ -252,52 +251,57 @@ function startSound(){
     }
 }
 
-function get_token(){
-
-    fetch(`${getBaseUrl()}:3000/api/getSessionToken`, {
-        method: 'POST', // assuming the server issues a token via a POST request
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch the session token');
-            }
-            return response.json();
-        })
-        .then(data => {
-            token = data.token;
-            console.log('Received session token:', token);
-            // You can now use the sessionToken for subsequent requests.
-        })
-        .catch(error => {
-            console.error('Error fetching session token:', error);
+async function get_token() {
+    try {
+        const response = await fetch(`${getBaseUrl()}:3000/api/getSessionToken`, {
+            method: 'POST',
         });
 
+        if (!response.ok) {
+            throw new Error('Failed to fetch the session token');
+        }
+
+        const data = await response.json();
+        console.log('Received session token:', data.token);
+        return data.token;
+    } catch (error) {
+        console.error('Error fetching session token:', error);
+        return '';
+    }
 }
 
-function update_score(token, score, pseudo, mode){
-    score = Number(score)
-    fetch(`${getBaseUrl()}:3000/api/updateScore`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ token, score, pseudo, mode })
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Score updated successfully:', data);
-            getHighScores()
-            get_token()
-        })
-        .catch(error => {
-            console.error('Error updating score:', error);
+
+async function update_score(score, pseudo, mode) {
+    score = Number(score);
+
+    const token = await get_token();
+
+    if (!token) {
+        console.error('Token not received. Aborting score update.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${getBaseUrl()}:3000/api/updateScore`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ token, score, pseudo, mode })
         });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        console.log('Score updated successfully:', data);
+        getHighScores();
+    } catch (error) {
+        console.error('Error updating score:', error);
+    }
 }
+
 
 function getBaseUrl() {
     const { protocol, hostname } = window.location;
