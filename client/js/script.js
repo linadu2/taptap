@@ -58,31 +58,40 @@ function activateRandomCell() {
         setTimeout(activateRandomCell, 5);
     };
 }
+function timer(timeLeftInSeconds) {
+    const totalDuration = timeLeftInSeconds * 1000;
+    const startTime = performance.now();
 
-function timer(timeLeft) {
-    let initialTime = timeLeft; // Sauvegarde le temps initial
-    timeLeft = timeLeft * 100;
-    let afficheTemps = document.getElementById("chrono");
-    afficheTemps.innerText = timeLeft;
-    var interval = setInterval(() => {
-        if (timeLeft > 0 && gameRunning === true) {
-            timeLeft -= 1;
-            afficheTemps.innerText = (timeLeft / 100).toFixed(2);
+    const afficheTemps = document.getElementById("chrono");
 
-            // Vérifie si le temps est à 25% et applique l'animation
-            if (timeLeft <= initialTime * 0.50 * 100 && !afficheTemps.classList.contains("clignote")) {
-                afficheTemps.classList.add("clignote"); // Ajoute l'animation
-            }
-
-        } else {
+    const interval = setInterval(() => {
+        if (!gameRunning) {
             clearInterval(interval);
-            timeLeft = 0;
             afficheTemps.innerText = (0).toFixed(2);
             stopGame();
             return;
         }
+
+        const elapsed = performance.now() - startTime;
+        const remaining = totalDuration - elapsed;
+
+        if (remaining <= 0) {
+            clearInterval(interval);
+            afficheTemps.innerText = (0).toFixed(2);
+            stopGame();
+            return;
+        }
+
+        afficheTemps.innerText = (remaining / 1000).toFixed(2);
+
+        if (remaining <= totalDuration * 0.50 &&
+            !afficheTemps.classList.contains("clignote")) {
+            afficheTemps.classList.add("clignote");
+        }
+
     }, 10);
 }
+
 
 function badclick() {
     if (gameRunning && mode != 2) {
