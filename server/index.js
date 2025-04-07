@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const https = require('https');
+const sanitizeHtml = require('sanitize-html');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -67,13 +68,18 @@ app.put('/api/updateScore', async (req, res) => {
     }
 
     // Validate the score (customize these rules as needed)
-    if (typeof score !== 'number' || score < 0 || score > 1000000) {
+    if (typeof score !== 'number' || score < 0 || score > 250) {
         return res.status(400).json({ error: 'Invalid score value' });
     }
 
+    const sanitized_pseudo = sanitizeHtml(pseudo, {
+        allowedTags: [],
+        allowedAttributes: {}
+    });
+
     // Here, you would update the high score in your database
-    console.log(`Updating high score to: ${score}; ${pseudo}; ${mode}`);
-    await updateScore(pseudo, score, mode)
+    console.log(`Updating high score to: ${score}; ${sanitized_pseudo}; ${mode}`);
+    await updateScore(sanitized_pseudo, score, mode)
 
     //remove the token if it's meant for one-time use
     validTokens.delete(token);
