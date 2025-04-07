@@ -1,19 +1,29 @@
 window.onload = function () {
-    getHighScores()
-    closeLeaderboard()
-    startSound()
-    loadHypeTrainContributors()
+    const storedName = localStorage.getItem('playerName');
+    if (storedName) {
+        playerName = storedName;
+    } else {
+        const enteredName = prompt("Enter your pseudo for the game:");
+        playerName = enteredName ? enteredName.trim() : "Guest";
+        localStorage.setItem('playerName', playerName);
+    }
+
+    getHighScores();
+    closeLeaderboard();
+    startSound();
+    loadHypeTrainContributors();
 };
+
 
 let gameRunning = false;
 let activeCell = null;
 let nbTap = 0;
-
+let playerName = null;
+let sessionData = {}
 let sound = true
 
-let highScores;
+let highScores, mode, temps;
 
-let mode, temps;
 
 
 function getHighScores() {
@@ -28,7 +38,6 @@ function getHighScores() {
             console.log('Score data:', data);
             highScores = data
             refresh();
-            // Process the JSON data here
         })
         .catch(error => {
             console.error('Error fetching score:', error);
@@ -88,7 +97,6 @@ function timer(timeLeftInSeconds) {
             !afficheTemps.classList.contains("clignote")) {
             afficheTemps.classList.add("clignote");
         }
-
     }, 10);
 }
 
@@ -98,8 +106,8 @@ function badclick() {
         if (mode == 3) {
             gameRunning = false
             addBadClass(3);
-            let audioDefaite = document.getElementById("audioDefaite");
             if(sound){
+                let audioDefaite = document.getElementById("audioDefaite");
                 audioDefaite.play();
             }
 
@@ -108,17 +116,15 @@ function badclick() {
             let score = document.getElementById("score");
             nbTap--;
             score.innerText = "Score: " + nbTap;
-            let audioRater = document.getElementById("audioRater");
             if(sound){
+                let audioRater = document.getElementById("audioRater");
                 audioRater.play();
             }
-
         }
     }
 }
 function showLeaderboard() {
     let leaderboardHTML = "<table class='leaderboard-table'><tr><th>Mode</th><th>Temps</th><th>Joueur</th><th>Score</th></tr>";
-
     for (let mode in highScores) {
         for (let time in highScores[mode]) {
             let entry = highScores[mode][time];
@@ -135,8 +141,8 @@ function closeLeaderboard() {
     document.getElementById("leaderboardModal").style.display = "none";
 }
 function clic() {
-    let ok = document.getElementById("ok");
     if(sound){
+        let ok = document.getElementById("ok");
         ok.play();
     }
     let score = document.getElementById("score");
@@ -145,7 +151,6 @@ function clic() {
 }
 
 async function startGame() {
-
     if (gameRunning) {
         return;
     }
@@ -153,8 +158,28 @@ async function startGame() {
     mode = document.getElementById("gameSelect").value;
     temps = document.getElementById("timeSelect").value;
 
-    let START = document.getElementById("START");
+    let table_conv = { '1': 'Normal', '2': 'Sans Malus', '3': '0 Vie' };
+
+    try {
+        const response = await fetch(`${getBaseUrl()}:3000/api/startGame`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // You can pass mode + time if your server wants it stored in the session
+            body: JSON.stringify({ modes : [table_conv[mode], temps + 'S']})
+        });
+        const data = await response.json();
+
+        // Store them globally so we can sign requests
+        sessionData.ephemeralKey = data.ephemeralKey;
+        sessionData.gameSessionId = data.gameSessionId;
+    } catch (err) {
+        console.error("Error starting game session:", err);
+        gameRunning = false;
+        return;
+    }
+
     if(sound){
+        let START = document.getElementById("START");
         START.play();
     }
 
@@ -197,27 +222,33 @@ function stopGame() {
     afficheTemps.style.color = "#DDD"; // Réinitialise la couleur
 
     gameRunning = false;
-
-    let table_conv = {'1' : 'Normal' , '2' : 'Sans Malus', '3' : '0 Vie'}
-    // Récupère le mode de jeu et le temps sélectionnés
+    let table_conv = { '1': 'Normal', '2': 'Sans Malus', '3': '0 Vie' };
     const gameMode = table_conv[mode];
     const timeSelected = temps + 'S';
 
-    // Vérifie si le score est un high score
     const currentHighScore = highScores[gameMode][timeSelected];
 
     if (nbTap > currentHighScore.score) {
-        let playerName = prompt("Félicitations ! Nouveau meilleur score ! Entrez votre pseudo :");
-        if (playerName) {
-            update_score(nbTap, playerName, [gameMode, timeSelected])
-            // Mise à jour de l'affichage du meilleur score après la partie
-            document.getElementById("score").innerText =
-                `Score: ${nbTap} | High Score: ${nbTap} (${playerName})`;
-        }
-    } else {
-        // Si ce n'est pas un meilleur score, on ne met à jour que le score actuel
-        document.getElementById("score").innerText = `Score: ${nbTap}`;    }
+        // We already got `playerName` on page load
+        const userName = playerName || "Guest";
 
+        // We call the function that does the HMAC-signed POST
+        update_score(nbTap, userName, [gameMode, timeSelected])
+            .then(() => {
+                // After updating, reflect new high score in the UI
+                document.getElementById("score").innerText =
+                    `Score: ${nbTap} | High Score: ${nbTap} (${userName})`;
+                getHighScores()
+            })
+            .catch(err => {
+                console.error("Error submitting score:", err);
+            });
+    } else {
+        // If no new high score, just show the final score
+        document.getElementById("score").innerText = `Score: ${nbTap}`;
+    }
+
+    // Clean up the active cell
     if (activeCell) {
         activeCell.classList.remove("active");
         activeCell.onclick = null;
@@ -261,53 +292,6 @@ function startSound(){
     }
 }
 
-async function get_token() {
-    try {
-        const response = await fetch(`${getBaseUrl()}:3000/api/getSessionToken`, {
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch the session token');
-        }
-
-        const data = await response.json();
-        return data.token;
-    } catch (error) {
-        return '';
-    }
-}
-
-
-async function update_score(score, pseudo, mode) {
-    score = Number(score);
-
-    const token = await get_token();
-
-    if (!token) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`${getBaseUrl()}:3000/api/updateScore`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ token, score, pseudo, mode })
-        });
-
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-
-        const data = await response.json();
-        console.log('Score updated successfully:', data);
-        getHighScores();
-    } catch (error) {
-        console.error('Error updating score:', error);
-    }
-}
 
 
 function getBaseUrl() {
@@ -350,4 +334,62 @@ function loadHypeTrainContributors() {
           console.error('Error fetching contributors:', error);
           document.getElementById('train-track').textContent = 'Error loading contributors.';
         });
+}
+
+async function generateHmac(secretKey, payload) {
+    const enc = new TextEncoder();
+    const secret = enc.encode(secretKey);
+    const msg = enc.encode(payload);
+
+    // Import the key for HMAC-SHA256
+    const cryptoKey = await window.crypto.subtle.importKey(
+        "raw",
+        secret,
+        { name: "HMAC", hash: { name: "SHA-256" } },
+        false,
+        ["sign"]
+    );
+    // Sign the payload
+    const signatureBuffer = await window.crypto.subtle.sign("HMAC", cryptoKey, msg);
+
+    // Convert ArrayBuffer -> base64 string
+    return btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+}
+
+async function update_score(score, pseudo, [gameMode, timeSelected]) {
+    const { ephemeralKey, gameSessionId } = sessionData;
+    if (!ephemeralKey || !gameSessionId) {
+        throw new Error("Missing ephemeralKey or gameSessionId - did you call startGame first?");
     }
+
+    // Build the payload
+    const payloadObject = {
+        score,
+        pseudo,
+        gameMode,
+        timeSelected,
+        timestamp: Date.now()
+    };
+    console.log(payloadObject)
+    const payloadString = JSON.stringify(payloadObject);
+
+    // Generate the HMAC signature
+    const signature = await generateHmac(ephemeralKey, payloadString);
+
+    // Send to server
+    const response = await fetch(`${getBaseUrl()}:3000/api/submit-score`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Session-Id": gameSessionId,
+            "X-Signature": signature
+        },
+        body: payloadString
+    });
+
+    const result = await response.json();
+    console.log("Score submission result:", result);
+    if (!response.ok) {
+        throw new Error(result.error || "Error submitting score");
+    }
+}

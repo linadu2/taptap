@@ -3,6 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const https = require('https');
 const sanitizeHtml = require('sanitize-html');
+const crypto = require("crypto");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -10,11 +11,9 @@ const port = process.env.PORT || 3000;
 const { getScores, updateScore } = require('./db');
 
 app.use(express.json());
-
 app.use(cors());
 
 let hasHttps = false;
-
 let options = {}
 
 // check if certificate exist
@@ -34,63 +33,113 @@ app.get('/api/getScore', async (req, res) => {
     //res.json({"Normal": {"10S": { score: 0, player: "" },"30S": { score: 0, player: "" },"60S": { score: 0, player: "" }},"Sans Malus": {"10S": { score: 0, player: "" },"30S": { score: 0, player: "" },"60S": { score: 0, player: "" }},"0 Vie": {"10S": { score: 0, player: "" },"30S": { score: 0, player: "" },"60S": { score: 0, player: "" }}})
 });
 
+const sessionStore = {};
 
-
-const validTokens = new Map();
-const TOKEN_TTL = 1 * 1000; // 1 sec
-
-// Clean up expired tokens periodically
 setInterval(() => {
     const now = Date.now();
-    for (const [token, expiry] of validTokens.entries()) {
-        if (expiry < now) {
-            validTokens.delete(token);
+
+    for (const gameSessionId in sessionStore) {
+        const sessionData = sessionStore[gameSessionId];
+        if (!sessionData) continue;
+
+        const { createdAt, modes } = sessionData;
+
+        const durationString = modes[1];
+
+        const numericPart = parseInt(durationString);
+
+        const durationMs = numericPart * 1000;
+
+        // If current time - createdAt > durationMs, session is expired
+        if (now - createdAt > durationMs) {
+            //console.log(`Session ${gameSessionId} expired; deleting...`);
+            delete sessionStore[gameSessionId];
         }
     }
-}, 5 * 1000); // Clean up 5 sec
+}, 30_000); // runs every 30 seconds
 
-// Route to initialize a game session and issue a token
-app.post('/api/getSessionToken', (req, res) => {
-    const token = Math.random().toString(36).substr(2);
-    const expiry = Date.now() + TOKEN_TTL;
-    validTokens.set(token, expiry);
-    res.json({ token });
-});
+
+
+app.post("/api/startGame", (req, res) => {
+    // 1. Generate ephemeral key
+    const ephemeralKey = crypto.randomBytes(32).toString("hex");
+
+    // 2. Create a unique session ID
+    const gameSessionId = crypto.randomBytes(16).toString("hex");
+
+
+    // 3. Extract the time and mode from the request (if your client sends them here)
+    const { modes } = req.body;
+    if(!["Normal", "Sans Malus", '0 Vie'].includes(modes[0]) || !["10S", "30S", "60S"].includes(modes[1])){
+        return res.status(403).json({"message": "invalid mode or temps"})
+    }
+
+    console.log(modes)
+
+    // 4. Store ephemeralKey, time, and mode in the session store
+    sessionStore[gameSessionId] = {
+        ephemeralKey,
+        modes,
+        "createdAt": Date.now()
+    };
+
+    // 5. Send sessionId and ephemeralKey to the client
+    //    Usually, you’d want to wrap this in a JWT or at least
+    //    only send it over HTTPS to protect the data in transit.
+    res.json({gameSessionId, ephemeralKey});
+})
+
 
 // Route to update the high score
-app.put('/api/updateScore', async (req, res) => {
-    const { token, score, pseudo, mode } = req.body;
+app.post("/api/submit-score", async (req, res) => {
+    const gameSessionId = req.headers["x-session-id"];
+    const clientSignature = req.headers["x-signature"];
 
-    const now = Date.now();
-    if(validTokens.get(token) < now){
-        validTokens.delete(token)
+    if (!gameSessionId || !clientSignature) {
+        return res.status(400).json({ error: "Missing session ID or signature" });
     }
 
-    // Check for a valid token
-    if (!validTokens.has(token)) {
-        console.log('Invalid token');
-        return res.status(403).json({ error: 'Invalid or missing session token' });
+    // Find ephemeralKey from in-memory store or DB
+    const sessionData = sessionStore[gameSessionId];
+    if (!sessionData) {
+        return res.status(401).json({ error: "Invalid session" });
     }
 
-    // Validate the score (customize these rules as needed)
+    const { ephemeralKey, modes } = sessionData;
+
+    // Recompute signature using the ephemeralKey
+    const bodyString = JSON.stringify(req.body);
+    const computedSignature = crypto
+        .createHmac("sha256", ephemeralKey)
+        .update(bodyString)
+        .digest("base64");
+
+    if (computedSignature !== clientSignature) {
+        return res.status(401).json({ error: "Signature mismatch, possible tampering" });
+    }
+
+    // Now extract the data from req.body
+    const { score, pseudo, gameMode, timeSelected } = req.body;
+
+    // Validate the score
     if (typeof score !== 'number' || score < 0 || score > 250) {
-        return res.status(400).json({ error: 'Invalid score value' });
+        return res.status(400).json({ error: "Invalid score value" });
     }
 
+    if(gameMode !== modes[0] || timeSelected !== modes[1]){
+        return res.status(400).json({message : "Mode different from start"})
+    }
+    // Sanitize pseudo
     const sanitized_pseudo = sanitizeHtml(pseudo, {
         allowedTags: [],
         allowedAttributes: {}
     });
+    console.log(`Updating high score to: ${score}; ${sanitized_pseudo}; ${modes}`);
+    await updateScore(sanitized_pseudo, score, modes);
 
-    // Here, you would update the high score in your database
-    console.log(`Updating high score to: ${score}; ${sanitized_pseudo}; ${mode}`);
-    await updateScore(sanitized_pseudo, score, mode)
-
-    //remove the token if it's meant for one-time use
-    validTokens.delete(token);
-
-    res.json({ message: 'Score updated successfully' });
+    return res.json({ success: true, message: "Score accepted" });
 });
+
 
 
 if(hasHttps){
