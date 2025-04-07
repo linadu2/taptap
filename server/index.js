@@ -31,7 +31,7 @@ if(fs.existsSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem')){
 // Define a route
 app.get('/api/getScore', async (req, res) => {
     res.json(await getScores());
-    //res.json({"1": {"10": { score: 0, player: "" },"30": { score: 0, player: "" },"60": { score: 0, player: "" }},"2": {"10": { score: 0, player: "" },"30": { score: 0, player: "" },"60": { score: 0, player: "" }},"3": {"10": { score: 0, player: "" },"30": { score: 0, player: "" },"60": { score: 0, player: "" }}})
+    //res.json({"Normal": {"10S": { score: 0, player: "" },"30S": { score: 0, player: "" },"60S": { score: 0, player: "" }},"Sans Malus": {"10S": { score: 0, player: "" },"30S": { score: 0, player: "" },"60S": { score: 0, player: "" }},"0 Vie": {"10S": { score: 0, player: "" },"30S": { score: 0, player: "" },"60S": { score: 0, player: "" }}})
 });
 
 
@@ -47,7 +47,7 @@ setInterval(() => {
             validTokens.delete(token);
         }
     }
-}, 0.5 * 1000); // Clean up 0.5 sec
+}, 5 * 1000); // Clean up 5 sec
 
 // Route to initialize a game session and issue a token
 app.post('/api/getSessionToken', (req, res) => {
@@ -60,6 +60,11 @@ app.post('/api/getSessionToken', (req, res) => {
 // Route to update the high score
 app.put('/api/updateScore', async (req, res) => {
     const { token, score, pseudo, mode } = req.body;
+
+    const now = Date.now();
+    if(validTokens.get(token) < now){
+        validTokens.delete(token)
+    }
 
     // Check for a valid token
     if (!validTokens.has(token)) {
