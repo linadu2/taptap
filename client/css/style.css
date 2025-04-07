@@ -261,7 +261,44 @@ label {
     color: white;
 }
 footer {
-    background-color: #f1f1f1;
-    padding: 10px;
-    text-align: center;
-}
+      background: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+      font-family: sans-serif;
+    }
+
+    /* Container that will mask overflow content */
+    #hype-train {
+      width: 80%;
+      margin: 0 auto;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+      padding: 10px 0;
+      box-sizing: border-box;
+    }
+
+    /* The track that will be animated left-to-right */
+    #train-track {
+      display: inline-block;
+      white-space: nowrap;
+      animation: moveTrain 15s linear infinite;
+    }
+
+    /* Each 'car' in the hype train */
+    .train-car {
+      display: inline-block;
+      padding: 0 1.5rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    /* Animation that moves the track from left to right */
+    @keyframes moveTrain {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-100%);
+      }
+    }

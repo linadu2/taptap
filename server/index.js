@@ -36,7 +36,7 @@ app.get('/api/getScore', async (req, res) => {
 
 
 const validTokens = new Map();
-const TOKEN_TTL = 10 * 1000; // 10 sec
+const TOKEN_TTL = 1 * 1000; // 1 sec
 
 // Clean up expired tokens periodically
 setInterval(() => {
@@ -46,7 +46,7 @@ setInterval(() => {
             validTokens.delete(token);
         }
     }
-}, 5 * 1000); // Clean up 5 sec
+}, 0.5 * 1000); // Clean up 0.5 sec
 
 // Route to initialize a game session and issue a token
 app.post('/api/getSessionToken', (req, res) => {

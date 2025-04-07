@@ -2,6 +2,7 @@ window.onload = function () {
     getHighScores()
     closeLeaderboard()
     startSound()
+    loadHypeTrainContributors()
 };
 
 let gameRunning = false;
@@ -262,10 +263,8 @@ async function get_token() {
         }
 
         const data = await response.json();
-        console.log('Received session token:', data.token);
         return data.token;
     } catch (error) {
-        console.error('Error fetching session token:', error);
         return '';
     }
 }
@@ -277,7 +276,6 @@ async function update_score(score, pseudo, mode) {
     const token = await get_token();
 
     if (!token) {
-        console.error('Token not received. Aborting score update.');
         return;
     }
 
@@ -307,3 +305,40 @@ function getBaseUrl() {
     const { protocol, hostname } = window.location;
     return `${protocol}//${hostname}`;
 }
+
+function loadHypeTrainContributors() {
+      const url = 'https://api.github.com/repos/linadu2/taptap/contributors';
+      
+      fetch(url)
+        .then(response => response.json())
+        .then(contributors => {
+          // Extract just the 'login' names
+          const contributorLogins = contributors.map(item => item.login);
+          const trainTrack = document.getElementById('train-track');
+
+          if (contributorLogins.length === 0) {
+            trainTrack.textContent = 'No contributors found.';
+            return;
+          }
+
+          // Create a "car" for each contributor
+          contributorLogins.forEach(login => {
+            const car = document.createElement('div');
+            car.classList.add('train-car');
+            car.textContent = login;
+            trainTrack.appendChild(car);
+          });
+
+          // Duplicate the logins so we get a seamless infinite loop
+          contributorLogins.forEach(login => {
+            const car = document.createElement('div');
+            car.classList.add('train-car');
+            car.textContent = login;
+            trainTrack.appendChild(car);
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching contributors:', error);
+          document.getElementById('train-track').textContent = 'Error loading contributors.';
+        });
+    }
