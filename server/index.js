@@ -11,10 +11,15 @@ const port = process.env.PORT || 3000;
 const { getScores, updateScore } = require('./db');
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: "https://taptap.l1-1.ephec-ti.be", // the exact front-end origin
+    credentials: true
+}));
 
 let hasHttps = false;
 let options = {}
+
+const functionPath = './function-hashes.json';
 
 // check if certificate exist
 if(fs.existsSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem')){
@@ -71,10 +76,9 @@ app.post("/api/startGame", (req, res) => {
     // 3. Extract the time and mode from the request (if your client sends them here)
     const { modes } = req.body;
     if(!["Normal", "Sans Malus", '0 Vie'].includes(modes[0]) || !["10S", "30S", "60S"].includes(modes[1])){
-        return res.status(403).json({"message": "invalid mode or temps"})
+        return res.status(403).json({"error": "No more clue"})
     }
 
-    console.log(modes)
 
     // 4. Store ephemeralKey, time, and mode in the session store
     sessionStore[gameSessionId] = {
@@ -95,17 +99,36 @@ app.post("/api/submit-score", async (req, res) => {
     const gameSessionId = req.headers["x-session-id"];
     const clientSignature = req.headers["x-signature"];
 
-    if (!gameSessionId || !clientSignature) {
-        return res.status(400).json({ error: "Missing session ID or signature" });
-    }
-
     // Find ephemeralKey from in-memory store or DB
     const sessionData = sessionStore[gameSessionId];
-    if (!sessionData) {
-        return res.status(401).json({ error: "Invalid session" });
+
+    const now = Date.now();
+    const { ephemeralKey, modes, createdAt } = sessionData;
+
+    const durationString = modes[1];
+    const numericPart = parseInt(durationString);
+    const durationMs = numericPart * 1000 + 3500;
+
+    //console.log(now - createdAt > durationMs + 500, now - createdAt < durationMs - 500)
+    //console.log(now, createdAt, durationMs)
+    if (now - createdAt  > durationMs + 1000 || now - createdAt < durationMs - 500) {
+        delete sessionStore[gameSessionId];
+        console.log('time expire')
+        return res.status(400).json({ error : "No more clue"})
     }
 
-    const { ephemeralKey, modes } = sessionData;
+    if (!gameSessionId || !clientSignature) {
+        //return res.status(400).json({ error: "Missing session ID or signature" });
+        console.log("Missing session ID or signature")
+        return res.status(400).json({ error: "No more clue" });
+    }
+
+    if (!sessionData) {
+        //return res.status(401).json({ error: "Invalid session" });
+        console.log("Invalid session")
+        return res.status(400).json({ error : "No more clue" });
+    }
+
 
     // Recompute signature using the ephemeralKey
     const bodyString = JSON.stringify(req.body);
@@ -115,19 +138,28 @@ app.post("/api/submit-score", async (req, res) => {
         .digest("base64");
 
     if (computedSignature !== clientSignature) {
-        return res.status(401).json({ error: "Signature mismatch, possible tampering" });
+        //return res.status(401).json({ error: "Signature mismatch, possible tampering" });
+        console.log('Signature mismatch, possible tampering')
+        return res.status(401).json({ error: "No more clue" });
     }
 
     // Now extract the data from req.body
-    const { score, pseudo, gameMode, timeSelected } = req.body;
+    const { score, pseudo, gameMode, timeSelected, fnHash } = req.body;
+
+    if(compareHash(fnHash)){
+        console.log('hash mismatch')
+        return res.status(400).json({ error : 'No more clue' })
+    }
 
     // Validate the score
     if (typeof score !== 'number' || score < 0 || score > 250) {
-        return res.status(400).json({ error: "Invalid score value" });
+        //return res.status(400).json({ error: "Invalid score value" });
+        return res.status(400).json({ error: "No more clue" });
     }
 
     if(gameMode !== modes[0] || timeSelected !== modes[1]){
-        return res.status(400).json({message : "Mode different from start"})
+        //return res.status(400).json({message : "Mode different from start"})
+        return res.status(400).json({message : "No more clue"})
     }
     // Sanitize pseudo
     const sanitized_pseudo = sanitizeHtml(pseudo, {
@@ -140,6 +172,34 @@ app.post("/api/submit-score", async (req, res) => {
     return res.json({ success: true, message: "Score accepted" });
 });
 
+app.get('/api/getFunction', async (req, res) => {
+    try {
+        // Read and parse the JSON file
+        const rawData = fs.readFileSync(functionPath, 'utf8');
+        const jsonData = JSON.parse(rawData);
+
+        // Get all the top-level keys
+        const keys = Object.keys(jsonData);
+
+        return res.json(keys)
+    } catch (err) {
+        console.error('Error reading or parsing JSON:', err);
+        return res.json({ error : 'error'})
+    }
+})
+
+
+function compareHash(fnHash){
+    const rawData = fs.readFileSync(functionPath, 'utf8');
+    const jsonData = JSON.parse(rawData);
+
+    for(const x in fnHash){
+        if(fnHash[x] !== jsonData[x]){
+            return true
+        }
+    }
+    return false
+}
 
 
 if(hasHttps){

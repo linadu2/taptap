@@ -1,6 +1,6 @@
-window.onload = function () {
+window.onload = function init () {
     const storedName = localStorage.getItem('playerName');
-    if (storedName) {
+    if (storedName && storedName !== 'Guest') {
         playerName = storedName;
     } else {
         const enteredName = prompt("Enter your pseudo for the game:");
@@ -362,15 +362,17 @@ async function update_score(score, pseudo, [gameMode, timeSelected]) {
         throw new Error("Missing ephemeralKey or gameSessionId - did you call startGame first?");
     }
 
+    const fnHash = await verifyFunctionIntegrity()
+
     // Build the payload
     const payloadObject = {
         score,
         pseudo,
         gameMode,
         timeSelected,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        fnHash
     };
-    console.log(payloadObject)
     const payloadString = JSON.stringify(payloadObject);
 
     // Generate the HMAC signature
@@ -379,6 +381,7 @@ async function update_score(score, pseudo, [gameMode, timeSelected]) {
     // Send to server
     const response = await fetch(`${getBaseUrl()}:3000/api/submit-score`, {
         method: "POST",
+        credentials: "include",
         headers: {
             "Content-Type": "application/json",
             "X-Session-Id": gameSessionId,
@@ -392,4 +395,28 @@ async function update_score(score, pseudo, [gameMode, timeSelected]) {
     if (!response.ok) {
         throw new Error(result.error || "Error submitting score");
     }
+}
+
+async function verifyFunctionIntegrity() {
+    try {
+        const res = await fetch(`${getBaseUrl()}:3000/api/getFunction`);
+        const functionNames = await res.json(); // e.g., ["myFunc", "doStuff"]
+
+        const hashMap = {};
+
+        for (const name of functionNames) {
+            const fn = window[name];
+
+            if (typeof fn === 'function') {
+                const code = fn.toString();
+                const hash = CryptoJS.SHA256(code).toString();
+                hashMap[name] = hash;
+            } else {
+                hashMap[name] = null; // Function not found
+            }
+        }
+        return hashMap
+    }
+    catch (err) {
+    console.error(err)}
 }
