@@ -9,4 +9,7 @@ RUN npm install --production
 # Copy the rest of your application code
 COPY . .
 
+RUN node ./make_hash/make_hash.js
+
+
 CMD ["node", "index.js"]

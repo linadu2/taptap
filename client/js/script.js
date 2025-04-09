@@ -1,18 +1,22 @@
-window.onload = function init () {
-    const storedName = localStorage.getItem('playerName');
-    if (storedName && storedName !== 'Guest') {
-        playerName = storedName;
-    } else {
-        const enteredName = prompt("Enter your pseudo for the game:");
-        playerName = enteredName ? enteredName.trim() : "Guest";
-        localStorage.setItem('playerName', playerName);
-    }
+if (typeof window !== 'undefined') {
+    window.onload = function init () {
+        const storedName = localStorage.getItem('playerName');
+        if (storedName && storedName !== 'Guest') {
+            playerName = storedName;
+        } else {
+            const enteredName = prompt("Enter your pseudo for the game:");
+            playerName = enteredName ? enteredName.trim() : "Guest";
+            localStorage.setItem('playerName', playerName);
+        }
 
-    getHighScores();
-    closeLeaderboard();
-    startSound();
-    loadHypeTrainContributors();
-};
+        getHighScores();
+        closeLeaderboard();
+        startSound();
+        loadHypeTrainContributors();
+    };
+}
+
+
 
 
 let gameRunning = false;
@@ -420,3 +424,8 @@ async function verifyFunctionIntegrity() {
     catch (err) {
     console.error(err)}
 }
+
+try {
+    module.exports = {getHighScores, getRandomCell, activateRandomCell, timer, badclick, clic, startGame, addBadClass, stopGame, refresh, generateHmac, update_score, verifyFunctionIntegrity  };
+}
+catch(err){}
