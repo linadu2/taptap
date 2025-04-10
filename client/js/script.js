@@ -375,7 +375,8 @@ async function update_score(score, pseudo, [gameMode, timeSelected]) {
         gameMode,
         timeSelected,
         timestamp: Date.now(),
-        fnHash
+        fnHash,
+        randomNumber: parseInt(`0x${ephemeralKey.substring(10, 23)}`)
     };
     const payloadString = JSON.stringify(payloadObject);
 

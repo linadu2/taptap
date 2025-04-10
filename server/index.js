@@ -31,6 +31,19 @@ if(fs.existsSync('/etc/letsencrypt/live/l1-1.ephec-ti.be/privkey.pem')){
     };
 }
 
+app.use((req, res, next) => {
+    const userAgent = req.headers['user-agent'];
+    console.log(req.headers, req.url);
+    if (userAgent.startsWith('curl/') || userAgent.indexOf("PowerShell") > 0 || userAgent.indexOf('zgrab') > 0 || !userAgent) {
+        return res.json({ error : 'No more clue'})
+    }
+    const lg = req.headers['accept-language'];
+    const en = req.headers['accept-encoding'];
+    if(!lg || !en){
+        return res.json({ error : 'No more clue'})
+    }
+    next();
+});
 
 // Define a route
 app.get('/api/getScore', async (req, res) => {
@@ -144,7 +157,12 @@ app.post("/api/submit-score", async (req, res) => {
     }
 
     // Now extract the data from req.body
-    const { score, pseudo, gameMode, timeSelected, fnHash } = req.body;
+    const { score, pseudo, gameMode, timeSelected, fnHash, randomNumber } = req.body;
+
+    if(parseInt(`0x${ephemeralKey.substring(10, 23)}`) !== randomNumber){
+        console.log('bad random number')
+        return res.json({ error: "No more clue" });
+    }
 
     if(compareHash(fnHash)){
         console.log('hash mismatch')
