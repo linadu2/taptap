@@ -379,6 +379,12 @@ async function update_score(score, pseudo, [gameMode, timeSelected]) {
     };
     const payloadString = JSON.stringify(payloadObject);
 
+    if(window !== undefined){
+        if(navigator.webdriver){
+            return ''
+        }
+    }
+
     // Generate the HMAC signature
     const signature = await generateHmac(ephemeralKey, payloadString);
 
