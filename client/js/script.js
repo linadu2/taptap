@@ -31,7 +31,7 @@ let highScores, mode, temps;
 
 
 function getHighScores() {
-    fetch(`${getBaseUrl()}:3000/api/getScore`, { method: 'GET' })
+    fetch(`/api/getScore`, { method: 'GET' })
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -165,7 +165,7 @@ async function startGame() {
     let table_conv = { '1': 'Normal', '2': 'Sans Malus', '3': '0 Vie' };
 
     try {
-        const response = await fetch(`${getBaseUrl()}:3000/api/startGame`, {
+        const response = await fetch(`/api/startGame`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             // You can pass mode + time if your server wants it stored in the session
@@ -296,13 +296,6 @@ function startSound(){
     }
 }
 
-
-
-function getBaseUrl() {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}`;
-}
-
 function loadHypeTrainContributors() {
       const url = 'https://api.github.com/repos/linadu2/taptap/contributors';
       
@@ -390,7 +383,7 @@ async function update_score(score, pseudo, [gameMode, timeSelected]) {
     const signature = await generateHmac(ephemeralKey, payloadString);
 
     // Send to server
-    const response = await fetch(`${getBaseUrl()}:3000/api/submit-score`, {
+    const response = await fetch(`/api/submit-score`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -410,7 +403,7 @@ async function update_score(score, pseudo, [gameMode, timeSelected]) {
 
 async function verifyFunctionIntegrity() {
     try {
-        const res = await fetch(`${getBaseUrl()}:3000/api/getFunction`);
+        const res = await fetch(`/api/getFunction`);
         const functionNames = await res.json(); // e.g., ["myFunc", "doStuff"]
 
         const hashMap = {};
